@@ -231,9 +231,6 @@ func TestProvider_StreamChat(t *testing.T) {
 
 func TestProvider_ConnectionPool(t *testing.T) {
 	cfg := &config.Config{
-		Provider: "openai",
-		Model:    "gpt-3.5-turbo",
-		APIKey:   "test-key",
 		PoolConfig: &resource.PoolConfig{
 			MaxSize:       2,
 			IdleTimeout:   time.Second,
@@ -249,9 +246,6 @@ func TestProvider_ConnectionPool(t *testing.T) {
 
 func TestProvider_RetryableClient(t *testing.T) {
 	cfg := &config.Config{
-		Provider: "openai",
-		Model:    "gpt-3.5-turbo",
-		APIKey:   "test-key",
 		RetryConfig: &resource.RetryConfig{
 			MaxRetries:      2,
 			InitialInterval: time.Millisecond,

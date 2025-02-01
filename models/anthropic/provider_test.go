@@ -249,9 +249,6 @@ func TestProvider_StreamChat(t *testing.T) {
 
 func TestProvider_ConnectionPool(t *testing.T) {
 	cfg := &config.Config{
-		Provider: "anthropic",
-		Model:    "claude-2",
-		APIKey:   "test-key",
 		PoolConfig: &resource.PoolConfig{
 			MaxSize:       2,
 			IdleTimeout:   time.Second,
@@ -297,9 +294,6 @@ func TestProvider_ConnectionPool(t *testing.T) {
 
 func TestProvider_RetryableClient(t *testing.T) {
 	cfg := &config.Config{
-		Provider: "anthropic",
-		Model:    "claude-2",
-		APIKey:   "test-key",
 		PoolConfig: &resource.PoolConfig{
 			MaxSize:       2,
 			IdleTimeout:   time.Second,
