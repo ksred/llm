@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ksred/llm/config"
@@ -16,7 +17,7 @@ import (
 )
 
 const (
-	defaultBaseURL = "https://api.anthropic.com/v1"
+	defaultBaseURL = "https://api.anthropic.com/v1/"
 	apiVersion     = "2023-06-01" // Latest stable version as of now
 )
 
@@ -84,7 +85,30 @@ func (p *Provider) Complete(ctx context.Context, req *types.CompletionRequest) (
 		return nil, err
 	}
 
-	return resp.toResponse(), nil
+	// Convert to CompletionResponse
+	content := ""
+	for _, c := range resp.Content {
+		if c.Type == "text" {
+			content += c.Text
+		}
+	}
+
+	return &types.CompletionResponse{
+		Response: types.Response{
+			ID:       resp.ID,
+			Provider: "anthropic",
+			Model:    resp.Model,
+			Message: types.Message{
+				Role:    types.RoleAssistant,
+				Content: content,
+			},
+			StopReason: resp.StopReason,
+			Usage: types.Usage{
+				PromptTokens:     resp.Usage.InputTokens,
+				CompletionTokens: resp.Usage.OutputTokens,
+			},
+		},
+	}, nil
 }
 
 // StreamComplete streams a completion for the given prompt
@@ -117,42 +141,56 @@ func (p *Provider) StreamComplete(ctx context.Context, req *types.CompletionRequ
 // Chat generates a chat completion for the given messages
 func (p *Provider) Chat(ctx context.Context, req *types.ChatRequest) (*types.ChatResponse, error) {
 	// Convert messages to Anthropic format
-	messages := make([]map[string]string, len(req.Messages))
-	for i, msg := range req.Messages {
-		messages[i] = map[string]string{
+	var systemMessage string
+	userMessages := make([]map[string]string, 0, len(req.Messages))
+	for _, msg := range req.Messages {
+		if msg.Role == types.RoleSystem {
+			systemMessage = msg.Content
+			continue
+		}
+		userMessages = append(userMessages, map[string]string{
 			"role":    string(msg.Role),
 			"content": msg.Content,
-		}
+		})
 	}
 
 	body := map[string]interface{}{
 		"model":      p.config.Model,
-		"messages":   messages,
+		"messages":   userMessages,
 		"max_tokens": req.MaxTokens,
 		"stream":     false,
 	}
 
+	if systemMessage != "" {
+		body["system"] = systemMessage
+	}
+
 	var resp anthropicCompletionResponse
 	if err := p.doRequest(ctx, "POST", "/messages", body, &resp); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("provider error: %w", err)
 	}
 
 	// Convert to ChatResponse
+	content := ""
+	for _, c := range resp.Content {
+		if c.Type == "text" {
+			content += c.Text
+		}
+	}
+
 	return &types.ChatResponse{
 		Response: types.Response{
-			ID:      resp.ID,
-			Created: time.Now(), // Anthropic doesn't provide creation time
+			ID:       resp.ID,
+			Provider: "anthropic",
+			Model:    resp.Model,
 			Message: types.Message{
 				Role:    types.RoleAssistant,
-				Content: resp.Content,
+				Content: content,
 			},
-			Provider:   "anthropic",
-			Model:      resp.Model,
 			StopReason: resp.StopReason,
 			Usage: types.Usage{
 				PromptTokens:     resp.Usage.InputTokens,
 				CompletionTokens: resp.Usage.OutputTokens,
-				TotalTokens:      resp.Usage.InputTokens + resp.Usage.OutputTokens,
 			},
 		},
 	}, nil
@@ -161,19 +199,28 @@ func (p *Provider) Chat(ctx context.Context, req *types.ChatRequest) (*types.Cha
 // StreamChat streams a chat completion for the given messages
 func (p *Provider) StreamChat(ctx context.Context, req *types.ChatRequest) (<-chan *types.ChatResponse, error) {
 	// Convert messages to Anthropic format
-	messages := make([]map[string]string, len(req.Messages))
-	for i, msg := range req.Messages {
-		messages[i] = map[string]string{
+	var systemMessage string
+	userMessages := make([]map[string]string, 0, len(req.Messages))
+	for _, msg := range req.Messages {
+		if msg.Role == types.RoleSystem {
+			systemMessage = msg.Content
+			continue
+		}
+		userMessages = append(userMessages, map[string]string{
 			"role":    string(msg.Role),
 			"content": msg.Content,
-		}
+		})
 	}
 
 	body := map[string]interface{}{
 		"model":      p.config.Model,
-		"messages":   messages,
+		"messages":   userMessages,
 		"max_tokens": req.MaxTokens,
 		"stream":     true,
+	}
+
+	if systemMessage != "" {
+		body["system"] = systemMessage
 	}
 
 	return p.streamRequest(ctx, "/messages", body)
@@ -204,17 +251,15 @@ func (p *Provider) doRequest(ctx context.Context, method, path string, body inte
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {
-		var apiErr types.ProviderError
+		var apiErr anthropicError
 		if err := json.NewDecoder(resp.Body).Decode(&apiErr); err != nil {
-			return fmt.Errorf("request failed with status %d", resp.StatusCode)
+			return fmt.Errorf("request failed with status %d: %w", resp.StatusCode, err)
 		}
-		return &apiErr
+		return fmt.Errorf("provider error: %s", apiErr.Error())
 	}
 
-	if v != nil {
-		if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
-			return fmt.Errorf("decoding response: %w", err)
-		}
+	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {
+		return fmt.Errorf("decoding response: %w", err)
 	}
 
 	return nil
@@ -257,58 +302,53 @@ func (p *Provider) streamRequest(ctx context.Context, path string, body interfac
 		defer resp.Body.Close()
 		defer close(responseChan)
 
-		reader := bufio.NewReader(resp.Body)
-		for {
-			select {
-			case <-ctx.Done():
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			line := scanner.Text()
+			if !strings.HasPrefix(line, "data: ") {
+				continue
+			}
+
+			// Remove "data: " prefix
+			data := strings.TrimPrefix(line, "data: ")
+			if data == "[DONE]" {
 				return
-			default:
-				line, err := reader.ReadBytes('\n')
-				if err != nil {
-					if err != io.EOF {
-						responseChan <- &types.ChatResponse{
-							Response: types.Response{
-								Error: fmt.Errorf("error reading stream: %w", err),
+			}
+
+			var streamResp anthropicStreamResponse
+			if err := json.Unmarshal([]byte(data), &streamResp); err != nil {
+				responseChan <- &types.ChatResponse{Response: types.Response{Error: fmt.Errorf("error decoding stream: %w", err)}}
+				return
+			}
+
+			// Convert stream response to ChatResponse
+			if streamResp.Type == "message_start" || streamResp.Type == "message_delta" {
+				continue
+			}
+
+			if streamResp.Type == "content_block_delta" || streamResp.Type == "content_block_start" {
+				content := ""
+				for _, c := range streamResp.Content {
+					if c.Type == "text" {
+						content += c.Text
+					}
+				}
+
+				if content != "" {
+					responseChan <- &types.ChatResponse{
+						Response: types.Response{
+							Message: types.Message{
+								Role:    types.RoleAssistant,
+								Content: content,
 							},
-						}
-					}
-					return
-				}
-
-				if len(line) == 0 {
-					continue
-				}
-
-				var streamResp anthropicStreamResponse
-				if err := json.Unmarshal(line, &streamResp); err != nil {
-					responseChan <- &types.ChatResponse{
-						Response: types.Response{
-							Error: fmt.Errorf("error decoding stream: %w", err),
 						},
 					}
-					continue
-				}
-
-				if streamResp.Type == "error" {
-					responseChan <- &types.ChatResponse{
-						Response: types.Response{
-							Error: fmt.Errorf("stream error: %s", streamResp.Content),
-						},
-					}
-					continue
-				}
-
-				responseChan <- &types.ChatResponse{
-					Response: types.Response{
-						Message: types.Message{
-							Role:    types.RoleAssistant,
-							Content: streamResp.Content,
-						},
-						Provider: "anthropic",
-						Model:    p.config.Model,
-					},
 				}
 			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			responseChan <- &types.ChatResponse{Response: types.Response{Error: fmt.Errorf("error reading stream: %w", err)}}
 		}
 	}()
 
