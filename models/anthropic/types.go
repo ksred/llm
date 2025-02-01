@@ -55,12 +55,11 @@ func (r *anthropicCompletionResponse) toResponse() *types.CompletionResponse {
 
 // anthropicStreamResponse represents a streaming response from the Anthropic API
 type anthropicStreamResponse struct {
-	Type    string `json:"type"`
-	Content []struct {
-		Type string `json:"type"`
+	Type  string `json:"type"`
+	Index int    `json:"index"`
+	Delta struct {
 		Text string `json:"text"`
-	} `json:"content"`
-	Role string `json:"role"`
+	} `json:"delta"`
 }
 
 // anthropicError represents an error response from the Anthropic API

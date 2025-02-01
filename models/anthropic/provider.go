@@ -317,7 +317,11 @@ func (p *Provider) streamRequest(ctx context.Context, path string, body interfac
 
 			var streamResp anthropicStreamResponse
 			if err := json.Unmarshal([]byte(data), &streamResp); err != nil {
-				responseChan <- &types.ChatResponse{Response: types.Response{Error: fmt.Errorf("error decoding stream: %w", err)}}
+				responseChan <- &types.ChatResponse{
+					Response: types.Response{
+						Error: fmt.Errorf("error decoding stream: %w", err),
+					},
+				}
 				return
 			}
 
@@ -327,13 +331,7 @@ func (p *Provider) streamRequest(ctx context.Context, path string, body interfac
 			}
 
 			if streamResp.Type == "content_block_delta" || streamResp.Type == "content_block_start" {
-				content := ""
-				for _, c := range streamResp.Content {
-					if c.Type == "text" {
-						content += c.Text
-					}
-				}
-
+				content := streamResp.Delta.Text
 				if content != "" {
 					responseChan <- &types.ChatResponse{
 						Response: types.Response{
@@ -348,7 +346,11 @@ func (p *Provider) streamRequest(ctx context.Context, path string, body interfac
 		}
 
 		if err := scanner.Err(); err != nil {
-			responseChan <- &types.ChatResponse{Response: types.Response{Error: fmt.Errorf("error reading stream: %w", err)}}
+			responseChan <- &types.ChatResponse{
+				Response: types.Response{
+					Error: fmt.Errorf("error reading stream: %w", err),
+				},
+			}
 		}
 	}()
 
