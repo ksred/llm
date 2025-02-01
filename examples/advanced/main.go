@@ -184,7 +184,7 @@ func (p *Provider) chat(ctx context.Context, msg string, stream bool) (string, e
 	inputTokens := len(msg)
 	outputTokens := len(response)
 	p.metrics.recordRequest(time.Since(start), inputTokens, outputTokens, true)
-	
+
 	// Track cost
 	usage := types.Usage{
 		PromptTokens:     inputTokens,
@@ -315,7 +315,7 @@ func main() {
 				for name, p := range providers {
 					fmt.Printf("\n=== %s Metrics ===\n", name)
 					fmt.Println(p.metrics)
-					
+
 					// Print cost metrics
 					cost, err := p.costTracker.GetCost(p.provider, p.model)
 					if err != nil {

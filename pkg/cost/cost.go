@@ -10,17 +10,17 @@ import (
 
 // TokenRates holds the cost per 1K tokens for a model
 type TokenRates struct {
-	PromptTokenRate      float64
+	PromptTokenRate     float64
 	CompletionTokenRate float64
 }
 
 // UsageStats holds usage statistics for a model
 type UsageStats struct {
-	TotalTokens      int
-	TotalCost        float64
-	RequestCount     int
-	AverageLatency   time.Duration
-	LastRequestTime  time.Time
+	TotalTokens     int
+	TotalCost       float64
+	RequestCount    int
+	AverageLatency  time.Duration
+	LastRequestTime time.Time
 }
 
 // CostTracker tracks usage and costs across providers and models
@@ -128,26 +128,26 @@ func GetProviderRates() map[string]map[string]TokenRates {
 	return map[string]map[string]TokenRates{
 		"openai": {
 			"gpt-4": {
-				PromptTokenRate:      0.03,  // $0.03 per 1K tokens
-				CompletionTokenRate:  0.06,  // $0.06 per 1K tokens
+				PromptTokenRate:     0.03, // $0.03 per 1K tokens
+				CompletionTokenRate: 0.06, // $0.06 per 1K tokens
 			},
 			"gpt-3.5-turbo": {
-				PromptTokenRate:      0.002, // $0.002 per 1K tokens
-				CompletionTokenRate:  0.002, // $0.002 per 1K tokens
+				PromptTokenRate:     0.002, // $0.002 per 1K tokens
+				CompletionTokenRate: 0.002, // $0.002 per 1K tokens
 			},
 		},
 		"anthropic": {
 			"claude-2.1": {
-				PromptTokenRate:      0.008, // $0.008 per 1K tokens
-				CompletionTokenRate:  0.024, // $0.024 per 1K tokens
+				PromptTokenRate:     0.008, // $0.008 per 1K tokens
+				CompletionTokenRate: 0.024, // $0.024 per 1K tokens
 			},
 			"claude-2": {
-				PromptTokenRate:      0.008, // $0.008 per 1K tokens
-				CompletionTokenRate:  0.024, // $0.024 per 1K tokens
+				PromptTokenRate:     0.008, // $0.008 per 1K tokens
+				CompletionTokenRate: 0.024, // $0.024 per 1K tokens
 			},
 			"claude-instant": {
-				PromptTokenRate:      0.0008, // $0.0008 per 1K tokens
-				CompletionTokenRate:  0.0024, // $0.0024 per 1K tokens
+				PromptTokenRate:     0.0008, // $0.0008 per 1K tokens
+				CompletionTokenRate: 0.0024, // $0.0024 per 1K tokens
 			},
 		},
 	}

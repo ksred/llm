@@ -105,9 +105,9 @@ func TestUsage_Total(t *testing.T) {
 		{
 			name: "normal usage",
 			usage: Usage{
-				PromptTokens:      10,
-				CompletionTokens:  20,
-				TotalTokens:       30,
+				PromptTokens:     10,
+				CompletionTokens: 20,
+				TotalTokens:      30,
 			},
 			expected: 30,
 		},

@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
+	"encoding/json"
+
 	"github.com/ksred/llm/config"
 	"github.com/ksred/llm/pkg/resource"
 	"github.com/ksred/llm/pkg/types"
-	"encoding/json"
 )
 
 func TestProvider_Complete(t *testing.T) {
@@ -23,7 +24,7 @@ func TestProvider_Complete(t *testing.T) {
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"id":      "test-id",
+			"id": "test-id",
 			"choices": []map[string]interface{}{
 				{
 					"text": "Hello",
@@ -93,7 +94,7 @@ func TestProvider_Chat(t *testing.T) {
 		}
 
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"id":      "test-id",
+			"id": "test-id",
 			"choices": []map[string]interface{}{
 				{
 					"message": map[string]interface{}{

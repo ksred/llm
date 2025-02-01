@@ -15,15 +15,15 @@ const (
 )
 
 var (
-	ErrEmptyRole     = errors.New("message role cannot be empty")
-	ErrInvalidRole   = errors.New("invalid message role")
-	ErrEmptyContent  = errors.New("message content cannot be empty")
+	ErrEmptyRole    = errors.New("message role cannot be empty")
+	ErrInvalidRole  = errors.New("invalid message role")
+	ErrEmptyContent = errors.New("message content cannot be empty")
 )
 
 // Message represents a single message in a conversation
 type Message struct {
-	Role     Role         `json:"role"`
-	Content  string       `json:"content"`
+	Role     Role           `json:"role"`
+	Content  string         `json:"content"`
 	Metadata map[string]any `json:"metadata,omitempty"`
 }
 
