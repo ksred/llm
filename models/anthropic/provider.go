@@ -255,7 +255,12 @@ func (p *Provider) doRequest(ctx context.Context, method, path string, body inte
 		if err := json.NewDecoder(resp.Body).Decode(&apiErr); err != nil {
 			return fmt.Errorf("request failed with status %d: %w", resp.StatusCode, err)
 		}
-		return fmt.Errorf("provider error: %s", apiErr.Error())
+		return &types.ProviderError{
+			Provider: "anthropic",
+			Code:     apiErr.Type,
+			Message:  apiErr.Message,
+			Err:      nil,
+		}
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(v); err != nil {

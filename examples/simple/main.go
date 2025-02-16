@@ -34,41 +34,51 @@ func main() {
 	}{
 		{
 			name: "OpenAI",
-			config: &config.Config{
-				Provider: "openai",
-				Model:    "gpt-3.5-turbo",
-				APIKey:   openaiKey,
-				PoolConfig: &resource.PoolConfig{
-					MaxSize:       5,
-					IdleTimeout:   time.Minute,
-					CleanupPeriod: time.Minute,
-				},
-				RetryConfig: &resource.RetryConfig{
-					MaxRetries:      3,
-					InitialInterval: 100 * time.Millisecond,
-					MaxInterval:     time.Second,
-					Multiplier:      2.0,
-				},
-			},
+			config: func() *config.Config {
+				cfg, err := config.NewConfig(openaiKey,
+					config.WithProvider("openai"),
+					config.WithModel("gpt-3.5-turbo"),
+					config.WithPoolConfig(&resource.PoolConfig{
+						MaxSize:       5,
+						IdleTimeout:   time.Minute,
+						CleanupPeriod: time.Minute,
+					}),
+					config.WithRetryConfig(&resource.RetryConfig{
+						MaxRetries:      3,
+						InitialInterval: 100 * time.Millisecond,
+						MaxInterval:     time.Second,
+						Multiplier:      2.0,
+					}),
+				)
+				if err != nil {
+					log.Fatalf("Failed to create OpenAI config: %v", err)
+				}
+				return cfg
+			}(),
 		},
 		{
 			name: "Anthropic",
-			config: &config.Config{
-				Provider: "anthropic",
-				Model:    "claude-2.1",
-				APIKey:   anthropicKey,
-				PoolConfig: &resource.PoolConfig{
-					MaxSize:       5,
-					IdleTimeout:   time.Minute,
-					CleanupPeriod: time.Minute,
-				},
-				RetryConfig: &resource.RetryConfig{
-					MaxRetries:      3,
-					InitialInterval: 100 * time.Millisecond,
-					MaxInterval:     time.Second,
-					Multiplier:      2.0,
-				},
-			},
+			config: func() *config.Config {
+				cfg, err := config.NewConfig(anthropicKey,
+					config.WithProvider("anthropic"),
+					config.WithModel("claude-2.1"),
+					config.WithPoolConfig(&resource.PoolConfig{
+						MaxSize:       5,
+						IdleTimeout:   time.Minute,
+						CleanupPeriod: time.Minute,
+					}),
+					config.WithRetryConfig(&resource.RetryConfig{
+						MaxRetries:      3,
+						InitialInterval: 100 * time.Millisecond,
+						MaxInterval:     time.Second,
+						Multiplier:      2.0,
+					}),
+				)
+				if err != nil {
+					log.Fatalf("Failed to create Anthropic config: %v", err)
+				}
+				return cfg
+			}(),
 		},
 	}
 
